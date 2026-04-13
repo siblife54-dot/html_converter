@@ -100,7 +100,6 @@
       background: rgba(245, 108, 122, 0.08);
     }
 
-    textarea,
     pre {
       width: 100%;
       border-radius: 12px;
@@ -110,20 +109,62 @@
       padding: 12px;
       font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
       font-size: 13px;
-    }
-
-    textarea {
-      min-height: 360px;
-      resize: vertical;
-      line-height: 1.45;
-    }
-
-    pre {
       margin: 0;
       min-height: 468px;
       overflow: auto;
       white-space: pre-wrap;
       word-break: break-word;
+    }
+
+    #editor {
+      width: 100%;
+      min-height: 360px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #0b1726;
+      color: var(--text);
+      padding: 12px;
+      line-height: 1.45;
+      outline: none;
+      font-size: 14px;
+    }
+
+    #editor:empty::before {
+      content: attr(data-placeholder);
+      color: var(--muted);
+      pointer-events: none;
+    }
+
+    #editor p,
+    #editor h3 {
+      margin: 0 0 10px;
+    }
+
+    #editor ul {
+      margin: 0 0 10px 20px;
+      padding: 0;
+    }
+
+    .visual-category,
+    .visual-block,
+    .visual-placeholder {
+      border: 1px dashed var(--border);
+      border-radius: 12px;
+      background: rgba(78, 161, 255, 0.08);
+      padding: 10px;
+      margin: 0 0 10px;
+    }
+
+    .visual-category-title {
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: #b9d9ff;
+    }
+
+    .visual-placeholder {
+      border-style: solid;
+      background: rgba(121, 179, 255, 0.13);
+      font-weight: 600;
     }
 
     .hint {
@@ -152,11 +193,11 @@
         <h2>Редактор контента</h2>
 
         <div class="toolbar">
-          <button type="button" data-wrap="strong" title="Жирный">Жирный</button>
-          <button type="button" data-wrap="em" title="Курсив">Курсив</button>
-          <button type="button" data-wrap="ul" title="Маркированный список">Список</button>
-          <button type="button" data-wrap="h3" title="Заголовок h3">H3</button>
-          <button type="button" data-wrap="category" title="Подзаголовок категории">Категория</button>
+          <button type="button" data-action="bold" title="Жирный">Жирный</button>
+          <button type="button" data-action="italic" title="Курсив">Курсив</button>
+          <button type="button" data-action="bullet" title="Маркированный список">Список</button>
+          <button type="button" data-action="h3" title="Заголовок h3">H3</button>
+          <button type="button" data-action="category" title="Подзаголовок категории">Категория</button>
         </div>
 
         <div class="template-row">
@@ -174,12 +215,12 @@
           <button type="button" data-demo="task">Demo: Задание</button>
         </div>
 
-        <textarea id="editor" placeholder="Пишите текст или вставляйте шаблоны кнопками выше..."></textarea>
+        <div id="editor" contenteditable="true" data-placeholder="Пишите текст как в обычном редакторе или добавляйте шаблоны кнопками выше..."></div>
 
         <div class="action-row" style="margin-top:10px;">
           <button type="button" id="clearBtn" class="danger">Очистить</button>
         </div>
-        <p class="hint">HTML справа обновляется автоматически при каждом изменении текста.</p>
+        <p class="hint">HTML справа обновляется автоматически при каждом изменении слева. Двойной клик по плашкам Видео/Картинка/PDF открывает редактирование.</p>
       </section>
 
       <section class="panel">
@@ -192,66 +233,368 @@
     </div>
   </main>
 
+  <template id="tplLessonBlock">
+    <div class="visual-block" data-type="lesson-block">
+      <p>Текст блока...</p>
+    </div>
+  </template>
+
+  <template id="tplCategory">
+    <div class="visual-category" data-type="lesson-category">
+      <div class="visual-category-title">Заголовок категории</div>
+      <p>Текст категории...</p>
+    </div>
+  </template>
+
   <script>
     const editor = document.getElementById('editor');
     const output = document.getElementById('output');
 
-    const templates = {
-      'lesson-block': `<div class="lesson-block">\n  <p>Текст урока...</p>\n</div>\n`,
-      'lesson-category': `<div class="lesson-category">Блок категории</div>\n`,
-      kinescope: `<div class="lesson-media">\n  <div class="lesson-media__frame">\n    <iframe class="lesson-media__content" src="https://kinescope.io/embed/your_video_id" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe>\n  </div>\n</div>\n`,
-      image: `<div class="lesson-block">\n  <img src="assets/images/example.jpg" alt="Описание изображения" loading="lazy">\n</div>\n`,
-      pdf: `<div class="lesson-block">\n  <h3>Материалы PDF</h3>\n  <ul>\n    <li><a href="assets/files/file-1.pdf" target="_blank" rel="noopener noreferrer">Файл 1</a></li>\n    <li><a href="assets/files/file-2.pdf" target="_blank" rel="noopener noreferrer">Файл 2</a></li>\n  </ul>\n</div>\n`,
-      task: `<div class="lesson-block">\n  <div class="lesson-category">Задание на сегодня</div>\n  <p>Опишите задачу для студента...</p>\n</div>\n`
-    };
-
-    const demos = {
-      intro: `<div class="lesson-category">Введение</div>\n<div class="lesson-block">\n  <h3>Добро пожаловать на урок</h3>\n  <p><strong>Цель:</strong> понять базовый workflow Telegram WebApp.</p>\n  <ul>\n    <li>Что такое WebApp</li>\n    <li>Как подключить бота</li>\n    <li>Как оформить урок</li>\n  </ul>\n</div>\n`,
-      media: `<div class="lesson-category">Практика</div>\n<div class="lesson-block">\n  <h3>Посмотрите видео</h3>\n  <div class="lesson-media">\n    <div class="lesson-media__frame">\n      <iframe class="lesson-media__content" src="https://kinescope.io/embed/your_video_id" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe>\n    </div>\n  </div>\n  <p>После видео скачайте дополнительные материалы:</p>\n  <ul>\n    <li><a href="assets/files/checklist.pdf" target="_blank" rel="noopener noreferrer">Чеклист</a></li>\n  </ul>\n</div>\n`,
-      task: `<div class="lesson-block">\n  <div class="lesson-category">Задание на сегодня</div>\n  <h3>Мини-практика</h3>\n  <p><em>Соберите</em> первый экран курса и добавьте туда:</p>\n  <ul>\n    <li>Заголовок</li>\n    <li>Описание</li>\n    <li>Кнопку действия</li>\n  </ul>\n</div>\n`
-    };
-
-    function wrapSelection(before, after = '') {
-      const start = editor.selectionStart;
-      const end = editor.selectionEnd;
-      const selected = editor.value.slice(start, end) || 'текст';
-      editor.setRangeText(`${before}${selected}${after}`, start, end, 'end');
-      updateOutput();
-      editor.focus();
+    function escapeHtml(str) {
+      return str
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;');
     }
 
-    function insertAtCursor(text) {
-      const pos = editor.selectionStart;
-      editor.setRangeText(text, pos, pos, 'end');
-      updateOutput();
+    function command(cmd, value = null) {
       editor.focus();
+      document.execCommand(cmd, false, value);
+      updateOutput();
+    }
+
+    function placeCaretAtEnd(element) {
+      const range = document.createRange();
+      const selection = window.getSelection();
+      range.selectNodeContents(element);
+      range.collapse(false);
+      selection.removeAllRanges();
+      selection.addRange(range);
+      element.focus();
+    }
+
+    function insertNodeAtCaret(node) {
+      const selection = window.getSelection();
+      if (!selection.rangeCount) {
+        editor.appendChild(node);
+        return;
+      }
+      const range = selection.getRangeAt(0);
+      range.deleteContents();
+      range.insertNode(node);
+      const br = document.createElement('p');
+      br.innerHTML = '<br>';
+      node.after(br);
+      placeCaretAtEnd(br);
+    }
+
+    function createPlaceholder(type, label, payload = {}) {
+      const div = document.createElement('div');
+      div.className = 'visual-placeholder';
+      div.dataset.type = type;
+      div.textContent = label;
+      Object.entries(payload).forEach(([k, v]) => {
+        div.dataset[k] = v;
+      });
+      return div;
+    }
+
+    function insertTemplate(type) {
+      if (type === 'lesson-block') {
+        const node = document.getElementById('tplLessonBlock').content.firstElementChild.cloneNode(true);
+        insertNodeAtCaret(node);
+      }
+
+      if (type === 'lesson-category') {
+        const node = document.getElementById('tplCategory').content.firstElementChild.cloneNode(true);
+        insertNodeAtCaret(node);
+      }
+
+      if (type === 'kinescope') {
+        insertNodeAtCaret(createPlaceholder('kinescope', '🎬 [ВИДЕО: https://kinescope.io/embed/VIDEO_ID]', { src: 'https://kinescope.io/embed/VIDEO_ID' }));
+      }
+
+      if (type === 'image') {
+        insertNodeAtCaret(createPlaceholder('image', '🖼️ [КАРТИНКА: assets/images/day5.jpg | alt: Описание]', {
+          src: 'assets/images/day5.jpg',
+          alt: 'Описание'
+        }));
+      }
+
+      if (type === 'pdf') {
+        insertNodeAtCaret(createPlaceholder('pdf', '📄 [PDF: Гайд|assets/files/guide.pdf; Чеклист|assets/files/checklist.pdf]', {
+          items: 'Гайд|assets/files/guide.pdf;Чеклист|assets/files/checklist.pdf'
+        }));
+      }
+
+      if (type === 'task') {
+        const task = document.createElement('div');
+        task.className = 'visual-category';
+        task.dataset.type = 'task';
+        task.innerHTML = `
+          <div class="visual-category-title">🎯 Задание на сегодня</div>
+          <p>Опишите задание для студента...</p>
+        `;
+        insertNodeAtCaret(task);
+      }
+      updateOutput();
+    }
+
+    function serializeInline(node) {
+      if (node.nodeType === Node.TEXT_NODE) {
+        return escapeHtml(node.textContent || '');
+      }
+
+      if (node.nodeType !== Node.ELEMENT_NODE) {
+        return '';
+      }
+
+      const tag = node.tagName.toLowerCase();
+      const inner = Array.from(node.childNodes).map(serializeInline).join('');
+
+      if (tag === 'strong' || tag === 'b') return `<strong>${inner}</strong>`;
+      if (tag === 'em' || tag === 'i') return `<em>${inner}</em>`;
+      if (tag === 'br') return '<br>';
+      if (tag === 'a') {
+        const href = escapeHtml(node.getAttribute('href') || '#');
+        return `<a href="${href}" target="_blank" rel="noopener noreferrer">${inner || href}</a>`;
+      }
+      return inner;
+    }
+
+    function serializeRichNode(node) {
+      if (node.nodeType === Node.TEXT_NODE) {
+        const text = node.textContent?.trim();
+        return text ? `<p>${escapeHtml(text)}</p>` : '';
+      }
+
+      if (node.nodeType !== Node.ELEMENT_NODE) {
+        return '';
+      }
+
+      const tag = node.tagName.toLowerCase();
+
+      if (tag === 'h3') return `<h3>${Array.from(node.childNodes).map(serializeInline).join('')}</h3>`;
+      if (tag === 'p' || tag === 'div') {
+        const content = Array.from(node.childNodes).map(serializeInline).join('').trim();
+        return content ? `<p>${content}</p>` : '';
+      }
+      if (tag === 'ul') {
+        const li = Array.from(node.children)
+          .filter((child) => child.tagName.toLowerCase() === 'li')
+          .map((item) => `<li>${Array.from(item.childNodes).map(serializeInline).join('').trim() || '&nbsp;'}</li>`)
+          .join('');
+        return li ? `<ul>${li}</ul>` : '';
+      }
+      if (tag === 'ol') {
+        const li = Array.from(node.children)
+          .filter((child) => child.tagName.toLowerCase() === 'li')
+          .map((item) => `<li>${Array.from(item.childNodes).map(serializeInline).join('').trim() || '&nbsp;'}</li>`)
+          .join('');
+        return li ? `<ol>${li}</ol>` : '';
+      }
+
+      return '';
+    }
+
+    function linesFromHtml(html, level = 0) {
+      if (!html) return [];
+      const indent = '  '.repeat(level);
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(`<root>${html}</root>`, 'text/html');
+      const root = doc.body.firstElementChild;
+      const lines = [];
+
+      function walk(node, depth) {
+        const pad = '  '.repeat(depth);
+        if (node.nodeType === Node.TEXT_NODE) {
+          const text = node.textContent?.trim();
+          if (text) lines.push(`${pad}${text}`);
+          return;
+        }
+        if (node.nodeType !== Node.ELEMENT_NODE) return;
+        const tag = node.tagName.toLowerCase();
+        const attrs = Array.from(node.attributes).map((a) => ` ${a.name}="${a.value}"`).join('');
+        const children = Array.from(node.childNodes);
+        if (children.length === 1 && children[0].nodeType === Node.TEXT_NODE) {
+          lines.push(`${pad}<${tag}${attrs}>${children[0].textContent}</${tag}>`);
+          return;
+        }
+        lines.push(`${pad}<${tag}${attrs}>`);
+        children.forEach((child) => walk(child, depth + 1));
+        lines.push(`${pad}</${tag}>`);
+      }
+
+      Array.from(root.childNodes).forEach((node) => walk(node, level));
+      return lines.map((line) => (line.startsWith(indent) ? line : `${indent}${line}`));
+    }
+
+    function blockHtmlFromNode(node) {
+      const type = node.dataset?.type;
+
+      if (type === 'lesson-block') {
+        const content = Array.from(node.childNodes).map(serializeRichNode).filter(Boolean).join('');
+        return `<div class="lesson-block">${content || '<p>&nbsp;</p>'}</div>`;
+      }
+
+      if (type === 'lesson-category' || type === 'task') {
+        const titleNode = node.querySelector('.visual-category-title');
+        const title = escapeHtml((titleNode?.textContent || '').trim() || (type === 'task' ? '🎯 Задание на сегодня' : 'Заголовок категории'));
+        const contentNodes = Array.from(node.childNodes).filter((child) => !child.classList?.contains('visual-category-title'));
+        const body = contentNodes.map(serializeRichNode).filter(Boolean).join('') || '<p>&nbsp;</p>';
+        return `<div class="lesson-category"><div class="lesson-category-title"><span class="cat-accent"></span>${title}</div>${body}</div>`;
+      }
+
+      if (type === 'kinescope') {
+        const src = escapeHtml(node.dataset.src || 'https://kinescope.io/embed/VIDEO_ID');
+        return `<div class="lesson-media"><div class="lesson-media__frame"><iframe class="lesson-media__content" src="${src}" frameborder="0" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen loading="lazy"></iframe></div></div>`;
+      }
+
+      if (type === 'image') {
+        const src = escapeHtml(node.dataset.src || 'assets/images/FILE_NAME.jpg');
+        const alt = escapeHtml(node.dataset.alt || 'Описание');
+        return `<img src="${src}" alt="${alt}" style="width:100%; border-radius:16px; margin-bottom:20px;">`;
+      }
+
+      if (type === 'pdf') {
+        const raw = node.dataset.items || '';
+        const items = raw
+          .split(';')
+          .map((part) => part.trim())
+          .filter(Boolean)
+          .map((item) => {
+            const [title, href] = item.split('|');
+            return { title: (title || 'PDF').trim(), href: (href || '#').trim() };
+          });
+
+        const list = items.length
+          ? `<ul>${items.map((item) => `<li><a href="${escapeHtml(item.href)}" target="_blank" rel="noopener noreferrer">${escapeHtml(item.title)}</a></li>`).join('')}</ul>`
+          : '<ul><li><a href="#" target="_blank" rel="noopener noreferrer">PDF</a></li></ul>';
+        return `<div class="lesson-block"><h3>Материалы PDF</h3>${list}</div>`;
+      }
+
+      return serializeRichNode(node);
     }
 
     function updateOutput() {
-      const html = `<section class="lesson-content">\n${editor.value.trim()}\n</section>`;
-      output.textContent = html;
+      const topNodes = Array.from(editor.childNodes).filter((node) => !(node.nodeType === Node.TEXT_NODE && !node.textContent.trim()));
+      const chunks = [];
+      let currentSimple = [];
+
+      const flushSimple = () => {
+        if (!currentSimple.length) return;
+        const html = currentSimple.map((node) => serializeRichNode(node)).filter(Boolean).join('');
+        if (html) chunks.push(`<div class="lesson-block">${html}</div>`);
+        currentSimple = [];
+      };
+
+      topNodes.forEach((node) => {
+        if (node.nodeType === Node.ELEMENT_NODE && node.dataset?.type) {
+          flushSimple();
+          chunks.push(blockHtmlFromNode(node));
+        } else {
+          currentSimple.push(node);
+        }
+      });
+      flushSimple();
+
+      const lines = ['<section class="lesson-content">'];
+      chunks.forEach((chunk) => {
+        lines.push(...linesFromHtml(chunk, 1));
+      });
+      lines.push('</section>');
+
+      output.textContent = lines.join('\n');
     }
 
-    document.querySelectorAll('[data-wrap]').forEach((btn) => {
+    document.querySelectorAll('[data-action]').forEach((btn) => {
       btn.addEventListener('click', () => {
-        const type = btn.dataset.wrap;
-        if (type === 'strong') wrapSelection('<strong>', '</strong>');
-        if (type === 'em') wrapSelection('<em>', '</em>');
-        if (type === 'ul') wrapSelection('\n<ul>\n  <li>', '</li>\n</ul>\n');
-        if (type === 'h3') wrapSelection('<h3>', '</h3>');
-        if (type === 'category') wrapSelection('<div class="lesson-category">', '</div>');
+        const action = btn.dataset.action;
+        if (action === 'bold') command('bold');
+        if (action === 'italic') command('italic');
+        if (action === 'bullet') command('insertUnorderedList');
+        if (action === 'h3') command('formatBlock', 'h3');
+        if (action === 'category') insertTemplate('lesson-category');
       });
     });
 
     document.querySelectorAll('[data-template]').forEach((btn) => {
-      btn.addEventListener('click', () => insertAtCursor(templates[btn.dataset.template]));
+      btn.addEventListener('click', () => {
+        editor.focus();
+        insertTemplate(btn.dataset.template);
+      });
     });
+
+    const demos = {
+      intro: `
+        <div class="visual-block" data-type="lesson-block">
+          <h3>Добро пожаловать на урок 🚀</h3>
+          <p><strong>Цель:</strong> понять базовый workflow Telegram WebApp.</p>
+          <ul>
+            <li>Что такое WebApp</li>
+            <li>Как подключить бота</li>
+            <li>Как оформить урок</li>
+          </ul>
+        </div>
+      `,
+      media: `
+        <div class="visual-category" data-type="lesson-category">
+          <div class="visual-category-title">Практика</div>
+          <p>Посмотрите видео и скачайте материалы:</p>
+        </div>
+        <div class="visual-placeholder" data-type="kinescope" data-src="https://kinescope.io/embed/your_video_id">🎬 [ВИДЕО: https://kinescope.io/embed/your_video_id]</div>
+        <div class="visual-placeholder" data-type="pdf" data-items="Чеклист|assets/files/checklist.pdf">📄 [PDF: Чеклист|assets/files/checklist.pdf]</div>
+      `,
+      task: `
+        <div class="visual-category" data-type="task">
+          <div class="visual-category-title">🎯 Задание на сегодня</div>
+          <h3>Мини-практика</h3>
+          <p><em>Соберите</em> первый экран курса и добавьте туда:</p>
+          <ul>
+            <li>Заголовок</li>
+            <li>Описание</li>
+            <li>Кнопку действия</li>
+          </ul>
+        </div>
+      `
+    };
 
     document.querySelectorAll('[data-demo]').forEach((btn) => {
       btn.addEventListener('click', () => {
-        editor.value = demos[btn.dataset.demo];
+        editor.innerHTML = demos[btn.dataset.demo];
         updateOutput();
       });
+    });
+
+    editor.addEventListener('dblclick', (event) => {
+      const placeholder = event.target.closest('.visual-placeholder');
+      if (!placeholder) return;
+
+      const type = placeholder.dataset.type;
+      if (type === 'kinescope') {
+        const src = window.prompt('Ссылка на embed видео:', placeholder.dataset.src || 'https://kinescope.io/embed/VIDEO_ID');
+        if (!src) return;
+        placeholder.dataset.src = src;
+        placeholder.textContent = `🎬 [ВИДЕО: ${src}]`;
+      }
+
+      if (type === 'image') {
+        const src = window.prompt('Путь к картинке:', placeholder.dataset.src || 'assets/images/FILE_NAME.jpg');
+        if (!src) return;
+        const alt = window.prompt('Alt описание:', placeholder.dataset.alt || 'Описание') || 'Описание';
+        placeholder.dataset.src = src;
+        placeholder.dataset.alt = alt;
+        placeholder.textContent = `🖼️ [КАРТИНКА: ${src} | alt: ${alt}]`;
+      }
+
+      if (type === 'pdf') {
+        const value = window.prompt('Формат: Название|путь;Название|путь', placeholder.dataset.items || 'Гайд|assets/files/guide.pdf');
+        if (!value) return;
+        placeholder.dataset.items = value;
+        placeholder.textContent = `📄 [PDF: ${value}]`;
+      }
+      updateOutput();
     });
 
     document.getElementById('copyBtn').addEventListener('click', async () => {
@@ -269,14 +612,14 @@
     });
 
     document.getElementById('clearBtn').addEventListener('click', () => {
-      editor.value = '';
-      updateOutput();
+      editor.innerHTML = '';
+      output.textContent = '';
       editor.focus();
     });
 
     editor.addEventListener('input', updateOutput);
 
-    editor.value = demos.intro;
+    editor.innerHTML = demos.intro;
     updateOutput();
   </script>
 </body>
