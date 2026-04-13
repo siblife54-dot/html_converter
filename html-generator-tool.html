@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Telegram WebApp HTML Generator</title>
+  <style>
+    :root {
+      --bg: #0e1b2b;
+      --card: #14263b;
+      --card-soft: #1a3048;
+      --border: #2a4563;
+      --text: #e7f0fa;
+      --muted: #9fb4cc;
+      --accent: #4ea1ff;
+      --accent-strong: #6cb3ff;
+      --danger: #f56c7a;
+      --radius: 14px;
+      --shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background: radial-gradient(circle at top, #13263b 0%, var(--bg) 60%);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    .app {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 18px;
+      display: grid;
+      gap: 16px;
+      grid-template-columns: 1fr;
+    }
+
+    .panel {
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0));
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 14px;
+    }
+
+    .panel h2 {
+      margin: 0 0 10px;
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .toolbar,
+    .template-row,
+    .demo-row,
+    .action-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    button {
+      border: 1px solid var(--border);
+      background: var(--card-soft);
+      color: var(--text);
+      border-radius: 10px;
+      padding: 8px 10px;
+      cursor: pointer;
+      font-size: 13px;
+      line-height: 1;
+      transition: 0.15s ease;
+    }
+
+    button:hover {
+      border-color: var(--accent);
+      transform: translateY(-1px);
+    }
+
+    button.primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #051321;
+      font-weight: 600;
+    }
+
+    button.primary:hover {
+      background: var(--accent-strong);
+      border-color: var(--accent-strong);
+    }
+
+    button.danger {
+      color: var(--danger);
+      border-color: rgba(245, 108, 122, 0.45);
+      background: rgba(245, 108, 122, 0.08);
+    }
+
+    textarea,
+    pre {
+      width: 100%;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #0b1726;
+      color: var(--text);
+      padding: 12px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 13px;
+    }
+
+    textarea {
+      min-height: 360px;
+      resize: vertical;
+      line-height: 1.45;
+    }
+
+    pre {
+      margin: 0;
+      min-height: 468px;
+      overflow: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .hint {
+      margin: 0;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .grid {
+      display: grid;
+      gap: 16px;
+      grid-template-columns: 1fr;
+    }
+
+    @media (min-width: 960px) {
+      .grid {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <div class="grid">
+      <section class="panel">
+        <h2>Редактор контента</h2>
+
+        <div class="toolbar">
+          <button type="button" data-wrap="strong" title="Жирный">Жирный</button>
+          <button type="button" data-wrap="em" title="Курсив">Курсив</button>
+          <button type="button" data-wrap="ul" title="Маркированный список">Список</button>
+          <button type="button" data-wrap="h3" title="Заголовок h3">H3</button>
+          <button type="button" data-wrap="category" title="Подзаголовок категории">Категория</button>
+        </div>
+
+        <div class="template-row">
+          <button type="button" data-template="lesson-block">lesson-block</button>
+          <button type="button" data-template="lesson-category">lesson-category</button>
+          <button type="button" data-template="kinescope">Видео Kinescope</button>
+          <button type="button" data-template="image">Картинка</button>
+          <button type="button" data-template="pdf">PDF-блок</button>
+          <button type="button" data-template="task">Задание на сегодня</button>
+        </div>
+
+        <div class="demo-row">
+          <button type="button" data-demo="intro">Demo: Вступление</button>
+          <button type="button" data-demo="media">Demo: Видео+файлы</button>
+          <button type="button" data-demo="task">Demo: Задание</button>
+        </div>
+
+        <textarea id="editor" placeholder="Пишите текст или вставляйте шаблоны кнопками выше..."></textarea>
+
+        <div class="action-row" style="margin-top:10px;">
+          <button type="button" id="clearBtn" class="danger">Очистить</button>
+        </div>
+        <p class="hint">HTML справа обновляется автоматически при каждом изменении текста.</p>
+      </section>
+
+      <section class="panel">
+        <h2>Готовый HTML-код</h2>
+        <div class="action-row">
+          <button type="button" id="copyBtn" class="primary">Скопировать HTML</button>
+        </div>
+        <pre id="output"></pre>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    const editor = document.getElementById('editor');
+    const output = document.getElementById('output');
+
+    const templates = {
+      'lesson-block': `<div class="lesson-block">\n  <p>Текст урока...</p>\n</div>\n`,
+      'lesson-category': `<div class="lesson-category">Блок категории</div>\n`,
+      kinescope: `<div class="lesson-media">\n  <div class="lesson-media__frame">\n    <iframe class="lesson-media__content" src="https://kinescope.io/embed/your_video_id" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe>\n  </div>\n</div>\n`,
+      image: `<div class="lesson-block">\n  <img src="assets/images/example.jpg" alt="Описание изображения" loading="lazy">\n</div>\n`,
+      pdf: `<div class="lesson-block">\n  <h3>Материалы PDF</h3>\n  <ul>\n    <li><a href="assets/files/file-1.pdf" target="_blank" rel="noopener noreferrer">Файл 1</a></li>\n    <li><a href="assets/files/file-2.pdf" target="_blank" rel="noopener noreferrer">Файл 2</a></li>\n  </ul>\n</div>\n`,
+      task: `<div class="lesson-block">\n  <div class="lesson-category">Задание на сегодня</div>\n  <p>Опишите задачу для студента...</p>\n</div>\n`
+    };
+
+    const demos = {
+      intro: `<div class="lesson-category">Введение</div>\n<div class="lesson-block">\n  <h3>Добро пожаловать на урок</h3>\n  <p><strong>Цель:</strong> понять базовый workflow Telegram WebApp.</p>\n  <ul>\n    <li>Что такое WebApp</li>\n    <li>Как подключить бота</li>\n    <li>Как оформить урок</li>\n  </ul>\n</div>\n`,
+      media: `<div class="lesson-category">Практика</div>\n<div class="lesson-block">\n  <h3>Посмотрите видео</h3>\n  <div class="lesson-media">\n    <div class="lesson-media__frame">\n      <iframe class="lesson-media__content" src="https://kinescope.io/embed/your_video_id" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe>\n    </div>\n  </div>\n  <p>После видео скачайте дополнительные материалы:</p>\n  <ul>\n    <li><a href="assets/files/checklist.pdf" target="_blank" rel="noopener noreferrer">Чеклист</a></li>\n  </ul>\n</div>\n`,
+      task: `<div class="lesson-block">\n  <div class="lesson-category">Задание на сегодня</div>\n  <h3>Мини-практика</h3>\n  <p><em>Соберите</em> первый экран курса и добавьте туда:</p>\n  <ul>\n    <li>Заголовок</li>\n    <li>Описание</li>\n    <li>Кнопку действия</li>\n  </ul>\n</div>\n`
+    };
+
+    function wrapSelection(before, after = '') {
+      const start = editor.selectionStart;
+      const end = editor.selectionEnd;
+      const selected = editor.value.slice(start, end) || 'текст';
+      editor.setRangeText(`${before}${selected}${after}`, start, end, 'end');
+      updateOutput();
+      editor.focus();
+    }
+
+    function insertAtCursor(text) {
+      const pos = editor.selectionStart;
+      editor.setRangeText(text, pos, pos, 'end');
+      updateOutput();
+      editor.focus();
+    }
+
+    function updateOutput() {
+      const html = `<section class="lesson-content">\n${editor.value.trim()}\n</section>`;
+      output.textContent = html;
+    }
+
+    document.querySelectorAll('[data-wrap]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const type = btn.dataset.wrap;
+        if (type === 'strong') wrapSelection('<strong>', '</strong>');
+        if (type === 'em') wrapSelection('<em>', '</em>');
+        if (type === 'ul') wrapSelection('\n<ul>\n  <li>', '</li>\n</ul>\n');
+        if (type === 'h3') wrapSelection('<h3>', '</h3>');
+        if (type === 'category') wrapSelection('<div class="lesson-category">', '</div>');
+      });
+    });
+
+    document.querySelectorAll('[data-template]').forEach((btn) => {
+      btn.addEventListener('click', () => insertAtCursor(templates[btn.dataset.template]));
+    });
+
+    document.querySelectorAll('[data-demo]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        editor.value = demos[btn.dataset.demo];
+        updateOutput();
+      });
+    });
+
+    document.getElementById('copyBtn').addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(output.textContent);
+        const copyBtn = document.getElementById('copyBtn');
+        const text = copyBtn.textContent;
+        copyBtn.textContent = 'Скопировано!';
+        setTimeout(() => {
+          copyBtn.textContent = text;
+        }, 1200);
+      } catch {
+        alert('Не удалось скопировать. Скопируйте вручную из блока справа.');
+      }
+    });
+
+    document.getElementById('clearBtn').addEventListener('click', () => {
+      editor.value = '';
+      updateOutput();
+      editor.focus();
+    });
+
+    editor.addEventListener('input', updateOutput);
+
+    editor.value = demos.intro;
+    updateOutput();
+  </script>
+</body>
+</html>
